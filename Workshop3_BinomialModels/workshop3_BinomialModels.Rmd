@@ -2,7 +2,7 @@
 title: "Workshop 3 -- Binomial model"
 author: "Frederic Barraquand"
 date: "March 21, 2020"
-output: 
+output:
   html_document:
       toc: true
       toc_depth: 4
@@ -21,9 +21,9 @@ options(mc.cores = parallel::detectCores())
 library(MASS)
 ```
 
-## Binomial and Bernoulli (generalized linear) models on simulated data 
+## Binomial and Bernoulli (generalized linear) models on simulated data
 
-Here we construct a Binomial model first. We have got 25 groups of size 50 or less, with a slightly different probability of success in each group. Let's say we have we have 25 groups of $z_i$ turtles. Females are born with probability $p_i$ in group $i$. 
+Here we construct a Binomial model first. We have got 25 groups of size 50 or less, with a slightly different probability of success in each group. Let's say we have we have 25 groups of $z_i$ turtles. Females are born with probability $p_i$ in group $i$.
 
 ```{r simulating-data}
 sample_size_per_group = round(30*runif(25))+20
@@ -53,7 +53,7 @@ Now we fit that model which writes mathematically like
 $$ y_i \sim \text{Binomial}(z_i,p(\text{temp}_i)) $$
 
 ```{stan output.var="m1.1"}
-data {                                             // observed variables 
+data {                                             // observed variables
   int<lower=1> N;                                  // number of observations
   vector[N] temp;                                  // temperature
   int<lower=0,upper=50> y[N];                      // response variable
@@ -61,7 +61,7 @@ data {                                             // observed variables
 }
 parameters {                                       // unobserved variables
   real mu_temp;
-  real gamma; 
+  real gamma;
 }
 model {
   for (k in 1:N){
@@ -78,8 +78,8 @@ fit.m1.1 <- sampling(m1.1, data = m11.data, iter = 1000, chains = 2, cores = 2)
 print(fit.m1.1, probs = c(0.10, 0.5, 0.9))
 ```
 
-Now we consider a simpler model with a different set of priors. We consider only one group which has 50 young turtles. The probability of obtaining a female of 0.3. 
-We have individual-level data. (As we don't have individual-level covariates, doing a bernoulli or binomial model is very much similar, but I am changing things just for fun and exercise here. Also to see if some codes are much faster). 
+Now we consider a simpler model with a different set of priors. We consider only one group which has 50 young turtles. The probability of obtaining a female of 0.3.
+We have individual-level data. (As we don't have individual-level covariates, doing a bernoulli or binomial model is very much similar, but I am changing things just for fun and exercise here. Also to see if some codes are much faster).
 
 ```{r simulating-data-2}
 Y=rbinom(50,1,0.3)
@@ -99,22 +99,22 @@ print(fit.m1.2, probs = c(0.10, 0.5, 0.9))
 
 ## Playing with priors
 
-### Why Beta? 
+### Why Beta?
 
-Why did I choose the Beta distribution for the prior of $p$? In short, this is the *conjugate prior distribution*, some sort of canonical choice. In the past, choosing conjugate priors used to speed up monumentously the computations. Nowadays this is less true but still: 
-- A conjugate prior is a prior whose probability distribution is also the distribution of the posterior. 
-In other words, here if we have a Beta prior we get a Beta posterior, and if we iterate the data assimilation process 10 000 times it will still be Beta. 
+Why did I choose the Beta distribution for the prior of $p$? In short, this is the *conjugate prior distribution*, some sort of canonical choice. In the past, choosing conjugate priors used to speed up monumentously the computations. Nowadays this is less true but still:
+- A conjugate prior is a prior whose probability distribution is also the distribution of the posterior.
+In other words, here if we have a Beta prior we get a Beta posterior, and if we iterate the data assimilation process 10 000 times it will still be Beta.
 
 [For more info and formulas](https://en.wikipedia.org/wiki/Conjugate_prior)
 
-### What shape? 
+### What shape?
 
 ```{r shape-beta}
 curve(dbeta(x,2,2))
 curve(dbeta(x,0.5,0.5),add=T,col="red")
 ```
 
-Obivously red would make little sense here. What would it imply? 
+Obivously red would make little sense here. What would it imply?
 
 ```{r modified-priors}
 m1.3 = stan_model("m1.3.stan")
@@ -122,12 +122,12 @@ fit.m1.3 <- sampling(m1.3, data = m12.data, iter = 1000, chains = 2, cores = 2)
 print(fit.m1.3, probs = c(0.10, 0.5, 0.9))
 ```
 
-Still works well but the prior is bringing no information or even poor information. 
+Still works well but the prior is bringing no information or even poor information.
 
 ### The consequence of too flat priors (esp. when messing with link functions)
 
 ```{stan output.var="m1.5"}
-data {                                             // observed variables 
+data {                                             // observed variables
   int<lower=1> N;                                  // number of observations
   vector[N] temp;                                  // temperature
   int<lower=0,upper=50> y[N];                      // response variable
@@ -135,7 +135,7 @@ data {                                             // observed variables
 }
 parameters {                                       // unobserved variables
   real mu_temp;
-  real gamma; 
+  real gamma;
 }
 model {
   for (k in 1:N){
@@ -156,13 +156,13 @@ x=seq(min(temperature),max(temperature),by=0.01)
 par(mfrow=c(1,2))
 plot(0, bty = 'n', pch = '', ylab = "Pr(female)", xlab = "Temperature",ylim=c(0,1))
 for (kprior in 1:100) {
-  prob = 1/(1+exp(-0.3*(x-mu_temp[kprior])) ) 
+  prob = 1/(1+exp(-0.3*(x-mu_temp[kprior])) )
   lines(x,prob,type="l",col="blue")}
 plot(0, bty = 'n', pch = '', ylab = "Pr(female)", xlab = "Temperature",ylim=c(0,1))
 for (kprior in 1:100) {
-  prob = 1/(1+exp(-gamma[kprior]*(x-mean(temperature))) ) 
+  prob = 1/(1+exp(-gamma[kprior]*(x-mean(temperature))) )
   lines(x,prob,type="l",col="blue")}
-### We get either 0 or 1. 
+### We get either 0 or 1.
 
 ### Better priors
 mu_temp = rnorm(100,2, 1) # prior of the mean temp
@@ -170,11 +170,11 @@ gamma = rnorm(100,1, 1)   # prior on the slope
 par(mfrow=c(1,2))
 plot(0, bty = 'n', pch = '', ylab = "Pr(female)", xlab = "Temperature",ylim=c(0,1))
 for (kprior in 1:100) {
-  prob = 1/(1+exp(-0.3*(x-mu_temp[kprior])) ) 
+  prob = 1/(1+exp(-0.3*(x-mu_temp[kprior])) )
   lines(x,prob,type="l",col="blue")}
 plot(0, bty = 'n', pch = '', ylab = "Pr(female)", xlab = "Temperature",ylim=c(0,1))
 for (kprior in 1:100) {
-  prob = 1/(1+exp(-abs(gamma[kprior])*(x-mean(temperature))) ) 
+  prob = 1/(1+exp(-abs(gamma[kprior])*(x-mean(temperature))) )
   lines(x,prob,type="l",col="blue")}
 
 ```
@@ -186,7 +186,7 @@ for (kprior in 1:100) {
 
 ## A real data example: eagles
 
-As suggested by McElreath p. 330 of his book, records of (160!) salmon-pirating attempts by one Bald eagle on another Bald eagle (not always the same!). NB: I haven't implemented the quadratic approx. suggested by McElreath though that sounds like an excellent exercise. 
+As suggested by McElreath p. 330 of his book, records of (160!) salmon-pirating attempts by one Bald eagle on another Bald eagle (not always the same!). NB: I haven't implemented the quadratic approx. suggested by McElreath though that sounds like an excellent exercise.
 
 ```{r eagles-exploring data}
 ?eagles
@@ -199,7 +199,7 @@ data(eagles) ### Explanatory variables
 #Size of victim eagle (L = large, S = small).
 eagles.glm <- glm(cbind(y, n - y) ~ P*A + V, data = eagles,
                   family = binomial) ##classic frequentist modelling
-# Small and immature birds capture less, small birds are more likely to have salmon stolen. So far so good. 
+# Small and immature birds capture less, small birds are more likely to have salmon stolen. So far so good.
 m2.data = list(N=nrow(eagles),y=eagles$y,z=eagles$n,P=as.numeric(eagles$P)-1,A=as.numeric(eagles$A)-1,V=as.numeric(eagles$V)-1)
 # m2.data = list(N=nrow(eagles),y=eagles$y,z=eagles$n,P=eagles$P,A=eagles$A,V=eagles$V)
 
@@ -208,21 +208,21 @@ m2.data = list(N=nrow(eagles),y=eagles$y,z=eagles$n,P=as.numeric(eagles$P)-1,A=a
 We're in a similar situation to the turtles sex, but with categorical explanatory variables
 
 ```{stan output.var="m2.1"}
-data {                                             // observed variables 
+data {                                             // observed variables
   int<lower=1> N;                                  // number of observations
   int<lower=0,upper=50> y[N];                      // response variable
   int<lower=0,upper=50> z[N];                      // sample size per group  
   int<lower=0,upper=1>  A[N];                      // attribute age of pirating eagle
   int<lower=0,upper=1>  P[N];                      // attribute size of pirating eagle
   int<lower=0,upper=1>  V[N];                      // attribute size of victim eagle
-  
+
 }
 
 parameters {                                       // unobserved variables
   real alpha;
-  real beta_P; 
-  real beta_V; 
-  real beta_A; 
+  real beta_P;
+  real beta_V;
+  real beta_A;
 }
 
 model {
@@ -245,7 +245,7 @@ fit.m2.1 <- sampling(m2.1, data = m2.data, iter = 1000, chains = 2, cores = 2)
 print(fit.m2.1, probs = c(0.10, 0.5, 0.9))
 ```
 
-What do we think of these priors? 
+What do we think of these priors?
 
 
 ## A model with hierarchical priors (hyperprior)
@@ -277,41 +277,41 @@ model {
     y[n] ~ bernoulli(inv_logit(x[n] * beta[ll[n]]));
 }
 
-``` 
+```
 
 We've got the opportunity to transform the previously eagles model into something less complex but with a similar philosophy (NB I wondering what priors they have on sigma[d] in their example). Currently we have estimated each effect (size of pirating eagle, age of pirating eagle, size of victim eagle) independently. On relatively small datasets, this is prone to inflation of effects and why in practice many statisticians implement some of form of [shrinkage](https://en.wikipedia.org/wiki/Shrinkage_(statistics)) in such models. This is done easily with an additional prior linking together the effects (see also McElreath's book on this).
 
 ```{stan output.var="m3.2"}
-data {                                             // observed variables 
+data {                                             // observed variables
   int<lower=1> N;                                  // number of observations
   int<lower=0,upper=50> y[N];                      // response variable
   int<lower=0,upper=50> z[N];                      // sample size per group  
   int<lower=0,upper=1>  A[N];
   int<lower=0,upper=1>  P[N];
   int<lower=0,upper=1>  V[N];
-  
+
 }
 
 parameters {                                       // unobserved variables
   real alpha;
-  real beta_P; 
-  real beta_V; 
-  real beta_A; 
-  real gamma_b; 
+  real beta_P;
+  real beta_V;
+  real beta_A;
+  real gamma_b;
 }
 
 model {
   for (k in 1:N){
   y[k] ~ binomial(z[k], inv_logit(alpha + beta_P*P[k] + beta_V*V[k] +beta_A*A[k]) );       // likelihood
   }
-  alpha ~ normal(0, 1);                // prior of the mean 
+  alpha ~ normal(0, 1);                // prior of the mean
   beta_P ~ normal(0, gamma_b);          // prior of the "slope" (here the effect, rather)
   beta_V ~ normal(0, gamma_b);          // prior of the slope
   beta_A ~ normal(0, gamma_b);          // prior of the slope
   gamma_b ~ gamma(0.1,0.1); 		// hyperprior
 }
 
-``` 
+```
 
 Let us now fit that model
 
@@ -321,7 +321,5 @@ fit.m3.2 <- sampling(m3.2, data = m2.data, iter = 1000, chains = 2, cores = 2)
 print(fit.m3.2, probs = c(0.10, 0.5, 0.9))
 ```
 
-Very moderate amount of shrinkage. There are some divergent iterations as well. 
-Perhaps there are not enough effects for this, or the distribution - gamma - is not constraining enough. 
-
-
+Very moderate amount of shrinkage. There are some divergent iterations as well.
+Perhaps there are not enough effects for this, or the distribution - gamma - is not constraining enough.
